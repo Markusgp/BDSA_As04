@@ -53,8 +53,8 @@ namespace Assignment4
 
             //KanbanContextFactory.Seed(context);
 
-            var chars = from c in context.Tasks
-                        where c.AlterEgo.Contains("a")
+            /* var chars = from c in context.Tasks
+                        where c.Title.Contains("a")
                         select new
                         {
                             c.GivenName,
@@ -66,18 +66,18 @@ namespace Assignment4
             foreach (var c in chars)
             {
                 Console.WriteLine(c);
+            } */
+
+
+            static IConfiguration LoadConfiguration()
+            {
+                var builder = new ConfigurationBuilder()
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("appsettings.json")
+                    .AddUserSecrets<Program>();
+
+                return builder.Build();
             }
-
-        }
-
-        static IConfiguration LoadConfiguration()
-        {
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json")
-                .AddUserSecrets<Program>();
-
-            return builder.Build();
         }
     }
 }
