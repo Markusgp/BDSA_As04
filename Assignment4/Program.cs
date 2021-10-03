@@ -16,14 +16,14 @@ namespace Assignment4
             var configuration = LoadConfiguration();
             var connectionString = configuration.GetConnectionString("Kanban");
 
-            Console.Write("Input name: ");
-            var name = Console.ReadLine();
-            var cmdText = "SELECT * FROM Characters WHERE Name LIKE '%' + @name + '%'";
+            Console.Write("Input title of task: ");
+            var title = Console.ReadLine();
+            var cmdText = "SELECT * FROM Tasks WHERE Title LIKE '%' + @title + '%'";
 
             using var connection = new SqlConnection(connectionString);
             using var command = new SqlCommand(cmdText, connection);
 
-            command.Parameters.AddWithValue("@name", name);
+            command.Parameters.AddWithValue("@title", title);
 
             connection.Open();
 
@@ -31,13 +31,13 @@ namespace Assignment4
 
             while (reader.Read())
             {
-                 var character = new
+                 var task = new
                  {
-                     Name = reader.GetString("Name"),
-                     Species = reader.GetString("Species")
+                     Title = reader.GetString("Title"),
+                     State = reader.GetString("State")
                  };
 
-                 Console.WriteLine(character);
+                 Console.WriteLine(task);
              }
 
             var optionsBuilder = new DbContextOptionsBuilder<KanbanContext>().UseSqlServer(connectionString);
@@ -45,7 +45,8 @@ namespace Assignment4
 
             var testTask = new Task
             {
-                 
+                Title = "Testing",
+                State = State.New
             };
 
             context.Tasks.Add(testTask);
