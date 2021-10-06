@@ -5,7 +5,7 @@ namespace Assignment4.Core
 {
     public interface ITaskRepository : IDisposable
     {
-        IReadOnlyCollection<TaskDTO> All();
+        IEnumerable<TaskDTO> All();
 
         /// <summary>
         ///
