@@ -13,7 +13,24 @@ namespace Assignment4
     {
         static void Main(string[] args)
         {
-            var configuration = LoadConfiguration();
+        
+            using (var db = new KanbanContext())
+            {
+                // Note: This sample requires the database to be created before running.
+                Console.WriteLine($"Database path: {db.DbPath}.");
+                
+                // Create
+                Console.WriteLine("Inserting a new task");
+                db.Add(new Task { Title = "Testing", State = State.New });
+                db.SaveChanges();
+
+            }
+        }
+    }
+}
+
+/* 
+var configuration = LoadConfiguration();
             var connectionString = configuration.GetConnectionString("Kanban");
 
             Console.Write("Input title of task: ");
@@ -69,7 +86,7 @@ namespace Assignment4
                 Console.WriteLine(c);
             } */
 
-
+/*
             static IConfiguration LoadConfiguration()
             {
                 var builder = new ConfigurationBuilder()
@@ -79,6 +96,4 @@ namespace Assignment4
 
                 return builder.Build();
             }
-        }
-    }
-}
+ */
