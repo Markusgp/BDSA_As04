@@ -2,7 +2,6 @@ using System;
 using Assignment4.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Microsoft.EntityFrameworkCore.Sqlite;
 
 namespace Assignment4.Entities
@@ -14,8 +13,8 @@ namespace Assignment4.Entities
         public DbSet<Task> Tasks { get; set; }
         public DbSet<Tag> Tags { get; set; }
         public DbSet<User> Users { get; set; }
-
-        public KanbanContext() 
+ 
+        public KanbanContext(DbContextOptions<KanbanContext> options) : base(options)
         { 
             var folder = Environment.SpecialFolder.LocalApplicationData;
             var path = Environment.GetFolderPath(folder);

@@ -2,19 +2,74 @@ using Assignment4.Core;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System;
+using System.Linq;
 
 namespace Assignment4.Entities
 {
     public class TaskRepository : ITaskRepository
     {
-        private readonly SqlConnection _connection;
+        private readonly KanbanContext _connection;
+        private bool disposedValue;
 
-        public TaskRepository(SqlConnection connection)
+        public TaskRepository(KanbanContext connection)
         {
             _connection = connection;
         }
 
         public IEnumerable<TaskDTO> All()
+        {
+            return _connection.Tasks
+                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
+                    .ToList().AsReadOnly();
+        }
+
+        public int Create(TaskDTO task)
+        {
+            Console.WriteLine("Creating new task");
+            var entity = new Task
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                AssignedTo = GetUser(task.AssignedToId),
+                Tags = GetTags(task.Tags).ToList(),
+                State = task.State
+            };
+
+            _connection.Tasks.Add(entity);
+
+            _connection.SaveChanges();
+
+            return entity.Id;
+        }
+
+        public void Delete(int taskId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public TaskDetailsDTO FindById(int id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Update(TaskDTO task)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Dispose()
+        {
+            _connection.Dispose();
+        }
+
+    }
+}
+
+
+
+        /* public IEnumerable<TaskDTO> All()
         {
             var cmdText = @"SELECT *
                             FROM Tasks AS c
@@ -160,5 +215,4 @@ namespace Assignment4.Entities
         {
             _connection.Dispose();
         }
-    }
-}
+    } */
