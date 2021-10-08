@@ -83,7 +83,7 @@ namespace Assignment4.Entities
             throw new NotImplementedException();
         }
 
-        Response Delete(int taskId)
+        public Response Delete(int taskId)
         {
             throw new NotImplementedException();
         }
