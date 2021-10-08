@@ -24,9 +24,13 @@ namespace Assignment4.Entities
                     .ToList().AsReadOnly();
         }
 
-        public int Create(TaskDTO task)
+        public void Dispose()
         {
-            Console.WriteLine("Creating new task");
+            _connection.Dispose();
+        }
+
+        public (Response Response, int TaskId) Create(TaskCreateDTO task)
+        {
             var entity = new Task
             {
                 Id = task.Id,
@@ -41,29 +45,48 @@ namespace Assignment4.Entities
 
             _connection.SaveChanges();
 
-            return entity.Id;
+            return (Response.Created,entity.Id);
         }
 
-        public void Delete(int taskId)
+        public IReadOnlyCollection<TaskDTO> ReadAll()
         {
             throw new NotImplementedException();
         }
 
-        public TaskDetailsDTO FindById(int id)
+        public IReadOnlyCollection<TaskDTO> ReadAllRemoved()
         {
             throw new NotImplementedException();
         }
 
-        public void Update(TaskDTO task)
+        public IReadOnlyCollection<TaskDTO> ReadAllByTag(string tag)
         {
             throw new NotImplementedException();
         }
 
-        public void Dispose()
+        public IReadOnlyCollection<TaskDTO> ReadAllByUser(int userId)
         {
-            _connection.Dispose();
+            throw new NotImplementedException();
         }
 
+        public IReadOnlyCollection<TaskDTO> ReadAllByState(State state)
+        {
+            throw new NotImplementedException();
+        }
+
+        public TaskDetailsDTO Read(int taskId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Response Update(TaskUpdateDTO task)
+        {
+            throw new NotImplementedException();
+        }
+
+        Response Delete(int taskId)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
 
