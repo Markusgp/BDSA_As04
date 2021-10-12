@@ -3,14 +3,18 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Assignment4.Core
 {
-    public class TagDTO
+    public record TagDTO(int Id, string Name, IReadOnlyCollection<TaskDTO> Tasks);
+    public record TagCreateDTO
     {
-        public int Id {get;set;}
-
         [Required]
         [StringLength(50)]
         public string Name {get;set;}
 
         public ICollection<TaskDTO> Tasks {get;set;}
+    }
+
+    public record TagUpdateDTO : TagCreateDTO
+    {
+        public int Id { get; init; }
     }
 }

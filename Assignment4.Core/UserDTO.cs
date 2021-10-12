@@ -3,11 +3,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Assignment4.Core
 {
-    public class UserDTO
+    public record UserDTO(int Id, string Name, string Email, IReadOnlyCollection<TaskDTO> Tasks);
+    public record UserCreateDTO
     {
-        [Required]
-        public int Id {get;set;}
-
         [Required]
         [StringLength(100)]
         public string Name {get;set;}
@@ -16,5 +14,10 @@ namespace Assignment4.Core
         public string Email {get;set;}
 
         public ICollection<TaskDTO> Tasks {get;set;}
+    }
+
+    public record UserUpdateDTO : TagCreateDTO
+    {
+        public int Id { get; init; }
     }
 }
