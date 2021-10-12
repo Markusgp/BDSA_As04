@@ -16,7 +16,7 @@ namespace Assignment4.Core
         public ICollection<TaskDTO> Tasks {get;set;}
     }
 
-    public record UserUpdateDTO : TagCreateDTO
+    public record UserUpdateDTO : UserCreateDTO
     {
         public int Id { get; init; }
     }

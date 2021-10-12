@@ -3,9 +3,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Assignment4.Core
 {
-    public record TaskDTO(int Id, string Title, string Description, int? AssignedToId, IReadOnlyCollection<string> Tags, State State);
+    public record TaskDTO(int Id, string Title, string Description, int? AssignedToId, ICollection<string> Tags, State State);
 
-    public record TaskDetailsDTO(int Id, string Title, int? AssignedToId, string AssignedToName, string AssignedToEmail, string Description, State State, IReadOnlyCollection<string> Tags) : TaskDTO(Id, Title, Description, AssignedToId, Tags, State);
+    public record TaskDetailsDTO(int Id, string Title, int? AssignedToId, string AssignedToName, string AssignedToEmail, string Description, State State, ICollection<string> Tags) : TaskDTO(Id, Title, Description, AssignedToId, Tags, State);
 
     public record TaskCreateDTO
     {

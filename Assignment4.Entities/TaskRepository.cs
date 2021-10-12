@@ -28,7 +28,7 @@ namespace Assignment4.Entities
                 Title = task.Title,
                 Description = task.Description,
                 AssignedTo = GetUser(task.AssignedToId),
-                Tags = GetTags(task.Tags),
+                Tags = GetTagsFromString(task.Tags).ToList(),
                 State = task.State
             };
 
@@ -42,20 +42,23 @@ namespace Assignment4.Entities
         public IReadOnlyCollection<TaskDTO> ReadAll()
         {
             return _connection.Tasks
-                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags), c.State))
+                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
                     .ToList().AsReadOnly();
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAllRemoved()
         {
-            throw new NotImplementedException();
+            return _connection.Tasks
+                    .Where(c => c.State == State.Removed)
+                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
+                    .ToList().AsReadOnly();
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAllByTag(string tag)
         {
             return _connection.Tasks
                     .Where(c => c.Tags.Contains(GetTag(tag)))
-                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags), c.State))
+                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
                     .ToList().AsReadOnly();
         }
 
@@ -63,7 +66,7 @@ namespace Assignment4.Entities
         {
             return _connection.Tasks
                     .Where(c => c.AssignedTo.Id == userId)
-                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags), c.State))
+                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
                     .ToList().AsReadOnly();
         }
 
@@ -79,21 +82,21 @@ namespace Assignment4.Entities
         {
             var tasks = from c in _connection.Tasks
                          where c.Id == taskId
-                         select new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags), c.State);
+                         select new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State);
 
             var task = tasks.FirstOrDefault();
 
             return new TaskDetailsDTO
-            {
-                Id = taskId,
-                Title = task.Title,
-                AssignedToId = task.AssignedToId,
-                AssignedToName = GetUser(task.AssignedToId).Name,
-                AssignedToEmail = GetUser(task.AssignedToId).Email,
-                Description = task.Description,
-                State = task.State,
-                Tags = GetTags(task.Tags).ToList()
-            };
+            (
+                taskId,
+                task.Title,
+                task.AssignedToId,
+                GetUser(task.AssignedToId).Name,
+                GetUser(task.AssignedToId).Email,
+                task.Description,
+                task.State,
+                task.Tags
+            );
         }
 
         public Response Update(TaskUpdateDTO task)
@@ -108,7 +111,7 @@ namespace Assignment4.Entities
             entity.Title = task.Title;
             entity.Description = task.Description;
             entity.AssignedTo = GetUser(task.AssignedToId);
-            entity.Tags = GetTags(task.Tags);
+            entity.Tags = GetTagsFromString(task.Tags).ToList();
             entity.State = task.State;
 
             _connection.SaveChanges();
@@ -141,7 +144,7 @@ namespace Assignment4.Entities
             new User { Id = (int) assignedToId };
         }
 
-        private IEnumerable<TagDTO> GetTags(ICollection<string> tags)
+        private IEnumerable<Tag> GetTagsFromString(ICollection<string> tags)
         {
             foreach (var item in tags)
             {
@@ -149,14 +152,21 @@ namespace Assignment4.Entities
                     .Where(t => t.Name == item)
                     .FirstOrDefault();
 
-                yield return new TagDTO
-                {
-                    Id = tag.Id,
-                    Name = tag.Name,
-                    Tasks = tag.Tasks
-                };
+                yield return tag;
             }
             
+        }
+
+        private IEnumerable<string> GetTags(ICollection<Tag> tags) 
+        {
+            foreach (var item in tags)
+            {
+                var tag = _connection.Tags
+                    .Where(t => t.Name == item.Name)
+                    .FirstOrDefault();
+
+                yield return tag.Name;
+            }
         }
 
         private Tag GetTag(string tag)
