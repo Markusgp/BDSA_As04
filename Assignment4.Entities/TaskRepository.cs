@@ -1,164 +1,178 @@
 using Assignment4.Core;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
+using System;
+using System.Linq;
 
 namespace Assignment4.Entities
 {
     public class TaskRepository : ITaskRepository
     {
-        private readonly SqlConnection _connection;
+        private readonly KanbanContext _connection;
+        private bool disposedValue;
 
-        public TaskRepository(SqlConnection connection)
+        public TaskRepository(KanbanContext connection)
         {
             _connection = connection;
-        }
-
-        public IEnumerable<TaskDTO> All()
-        {
-            var cmdText = @"SELECT *
-                            FROM Tasks AS c
-                            ORDER BY c.Name";
-
-            using var command = new SqlCommand(cmdText, _connection);
-
-            OpenConnection();
-
-            using var reader = command.ExecuteReader();
-
-            while (reader.Read())
-            {
-                yield return new TaskDTO
-                {
-                    Id = reader.GetInt32("Id"),
-                    Title = reader.GetString("Title"),
-                    Description = reader.GetString("Description"),
-                    AssignedToId = reader.GetInt32("AssignedToId"),
-                    //Tags = reader.Get("Tags")
-                    //State = reader.GetString("State")
-                };
-            }
-
-            CloseConnection();
-        }
-
-        public int Create(TaskDTO task)
-        {
-            var cmdText = @"INSERT Task (Title, Description, AssignedToId, State, Tags)
-                            VALUES (@Title, @Description, @AssignedToId, @State, @Tags);
-                            SELECT SCOPE_IDENTITY()";
-
-            using var command = new SqlCommand(cmdText, _connection);
-
-            command.Parameters.AddWithValue("@Title", task.Title);
-            command.Parameters.AddWithValue("@Description", task.Description);
-            command.Parameters.AddWithValue("@AssignedToId", task.AssignedToId);
-            command.Parameters.AddWithValue("@State", task.State);
-            command.Parameters.AddWithValue("@Tags", task.Tags);
-
-            OpenConnection();
-
-            var id = command.ExecuteScalar();
-
-            CloseConnection();
-
-            return (int)id;
-        }
-
-        public void Delete(int taskId)
-        {
-            var cmdText = @"DELETE Task WHERE Id = @Id";
-
-            using var command = new SqlCommand(cmdText, _connection);
-
-            command.Parameters.AddWithValue("@Id", taskId);
-
-            OpenConnection();
-
-            command.ExecuteNonQuery();
-
-            CloseConnection();
-        }
-
-        public TaskDetailsDTO FindById(int id)
-        {
-            var cmdText = @"SELECT c.Title, c.Description, c.AssignedToId, c.State, c.Tags
-                            FROM TaskDetails AS c
-                            LEFT JOIN Tasks AS t ON c.Id = t.Id
-                            WHERE c.Id = @Id";
-
-            using var command = new SqlCommand(cmdText, _connection);
-
-            command.Parameters.AddWithValue("@Id", id);
-
-            OpenConnection();
-
-            using var reader = command.ExecuteReader();
-
-            var taskDetails = reader.Read()
-                ? new TaskDetailsDTO
-                {
-                    Id = reader.GetInt32("Id"),
-                    Title = reader.GetString("Title"),
-                    Description = reader.GetString("Description"),
-                    AssignedToId = reader.GetInt32("AssignedToId"),
-                    AssignedToName = reader.GetString("AssignedToName"),
-                    AssignedToEmail = reader.GetString("AssignedToEmail")
-                    //Tags = reader.Get("Tags")
-                    //State = reader.GetString("State")
-                }
-                : null;
-
-            CloseConnection();
-
-            return taskDetails;
-        }
-
-        public void Update(TaskDTO task)
-        {
-            var cmdText = @"UPDATE Tasks SET
-                            Title = @Title,
-                            Description = @Description,
-                            AssignedToId = @AssignedToId,
-                            State = @State
-                            Tags = @Tags
-                            WHERE Id = @Id";
-
-            using var command = new SqlCommand(cmdText, _connection);
-
-            command.Parameters.AddWithValue("@Id", task.Id);
-            command.Parameters.AddWithValue("@Title", task.Title);
-            command.Parameters.AddWithValue("@Description", task.Description);
-            command.Parameters.AddWithValue("@AssignedToId", task.AssignedToId);
-            command.Parameters.AddWithValue("@State", task.State);
-            command.Parameters.AddWithValue("@Tags", task.Tags);
-
-            OpenConnection();
-
-            command.ExecuteNonQuery();
-
-            CloseConnection();
-        }
-
-        private void OpenConnection()
-        {
-            if (_connection.State == ConnectionState.Closed)
-            {
-                _connection.Open();
-            }
-        }
-
-        private void CloseConnection()
-        {
-            if (_connection.State == ConnectionState.Open)
-            {
-                _connection.Close();
-            }
         }
 
         public void Dispose()
         {
             _connection.Dispose();
+        }
+
+        public (Response Response, int TaskId) Create(TaskCreateDTO task)
+        {
+            var entity = new Task
+            {
+                Title = task.Title,
+                Description = task.Description,
+                AssignedTo = GetUser(task.AssignedToId),
+                Tags = GetTagsFromString(task.Tags).ToList(),
+                State = task.State
+            };
+
+            _connection.Tasks.Add(entity);
+
+            _connection.SaveChanges();
+
+            return (Response.Created,entity.Id);
+        }
+
+        public IReadOnlyCollection<TaskDTO> ReadAll()
+        {
+            return _connection.Tasks
+                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
+                    .ToList().AsReadOnly();
+        }
+
+        public IReadOnlyCollection<TaskDTO> ReadAllRemoved()
+        {
+            return _connection.Tasks
+                    .Where(c => c.State == State.Removed)
+                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
+                    .ToList().AsReadOnly();
+        }
+
+        public IReadOnlyCollection<TaskDTO> ReadAllByTag(string tag)
+        {
+            return _connection.Tasks
+                    .Where(c => c.Tags.Contains(GetTag(tag)))
+                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
+                    .ToList().AsReadOnly();
+        }
+
+        public IReadOnlyCollection<TaskDTO> ReadAllByUser(int userId)
+        {
+            return _connection.Tasks
+                    .Where(c => c.AssignedTo.Id == userId)
+                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
+                    .ToList().AsReadOnly();
+        }
+
+        public IReadOnlyCollection<TaskDTO> ReadAllByState(State state)
+        {
+            return _connection.Tasks
+                    .Where(c => c.State == state)
+                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
+                    .ToList().AsReadOnly();
+        }
+
+        public TaskDetailsDTO Read(int taskId)
+        {
+            var tasks = from c in _connection.Tasks
+                         where c.Id == taskId
+                         select new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State);
+
+            var task = tasks.FirstOrDefault();
+
+            return new TaskDetailsDTO
+            (
+                taskId,
+                task.Title,
+                task.AssignedToId,
+                GetUser(task.AssignedToId).Name,
+                GetUser(task.AssignedToId).Email,
+                task.Description,
+                task.State,
+                task.Tags
+            );
+        }
+
+        public Response Update(TaskUpdateDTO task)
+        {
+            var entity = _connection.Tasks.Find(task.Id);
+
+            if (entity == null)
+            {
+                return Response.NotFound;
+            }
+
+            entity.Title = task.Title;
+            entity.Description = task.Description;
+            entity.AssignedTo = GetUser(task.AssignedToId);
+            entity.Tags = GetTagsFromString(task.Tags).ToList();
+            entity.State = task.State;
+
+            _connection.SaveChanges();
+
+            return Response.Updated;
+        }
+
+        public Response Delete(int taskId)
+        {
+            var entity = _connection.Tasks.Find(taskId);
+
+            if (entity == null)
+            {
+                return Response.NotFound;
+            }
+
+            _connection.Tasks.Remove(entity);
+            _connection.SaveChanges();
+
+            return Response.Deleted;
+        }
+
+
+
+
+        private User GetUser(int? assignedToId)
+        {
+            if (assignedToId == null) return null;
+            return _connection.Users.FirstOrDefault(c => c.Id == assignedToId) ??
+            new User { Id = (int) assignedToId };
+        }
+
+        private IEnumerable<Tag> GetTagsFromString(ICollection<string> tags)
+        {
+            foreach (var item in tags)
+            {
+                var tag = _connection.Tags
+                    .Where(t => t.Name == item)
+                    .FirstOrDefault();
+
+                yield return tag;
+            }
+            
+        }
+
+        private IEnumerable<string> GetTags(ICollection<Tag> tags) 
+        {
+            foreach (var item in tags)
+            {
+                var tag = _connection.Tags
+                    .Where(t => t.Name == item.Name)
+                    .FirstOrDefault();
+
+                yield return tag.Name;
+            }
+        }
+
+        private Tag GetTag(string tag)
+        {
+            return _connection.Tags.FirstOrDefault(c => c.Name == tag) ??
+            new Tag { Name = tag };
         }
     }
 }
