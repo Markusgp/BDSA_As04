@@ -9,7 +9,7 @@ namespace Assignment4.Entities
     public class TaskRepository : ITaskRepository
     {
         private readonly KanbanContext _connection;
-        private bool disposedValue;
+        //private bool disposedValue;
 
         public TaskRepository(KanbanContext connection)
         {

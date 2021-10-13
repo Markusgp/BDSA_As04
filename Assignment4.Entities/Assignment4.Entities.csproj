@@ -16,8 +16,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.10"/>
   </ItemGroup>
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>net5.0</TargetFramework>
-    <UserSecretsId>8ab0bee3-8a46-4890-8ae5-ef4571482239</UserSecretsId>
   </PropertyGroup>
+
 </Project>
