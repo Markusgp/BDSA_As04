@@ -30,7 +30,16 @@ namespace Assignment4.Entities.Tests
                 State = State.New
             };
 
+            var user = new User
+            {
+                Id = 0,
+                Name = "Test User",
+                Email = "...",
+                Tasks = new List<Task>()
+            };
+
             context.Tasks.Add(entity);
+            context.Users.Add(user);
             context.SaveChanges();
 
             _context = context;
@@ -39,14 +48,17 @@ namespace Assignment4.Entities.Tests
         }
 
         [Fact]
-        public void TaskRepo_creates_task_at_id_1()
+        public void TaskRepo_creates_task_at_id_2()
         {
             var entity = new TaskCreateDTO
             {   
                 Title = "Repo testing",
-                //Description = "Testing our three repositories",
+                AssignedToId = 0,
+                AssignedToName = "Test User",
+                AssignedToEmail = "...",
+                Description = "Testing our three repositories",
                 State = State.New,
-                //Tags = {"testing","important"}
+                Tags = new List<string>()
             };
 
             Assert.NotNull(entity);
@@ -55,7 +67,7 @@ namespace Assignment4.Entities.Tests
             var (res,id) = repo.Create(entity);
 
             Assert.Equal(Response.Created,res);
-            Assert.Equal(1,id);
+            Assert.Equal(2,id);
         }
 
         [Fact]
