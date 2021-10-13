@@ -72,5 +72,17 @@ namespace Assignment4.Entities.Tests
         {
 
         }
+
+        [Fact]
+        public void Read_given_nonexisting_id_returns_null() {
+            var task = repo.Read(999);
+            Assert.Null(task);
+        }
+        [Fact]
+        public void Delete_given_Active_task_returns_Deleted() 
+        {
+            var deleted = repo.Delete(1);
+            Assert.Equal(Response.Deleted, deleted);
+        }
     }
 }
