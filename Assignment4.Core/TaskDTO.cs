@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -23,6 +24,8 @@ namespace Assignment4.Core
 
         [Required]
         public State State {get;set;}
+        
+        public DateTime StateUpdated {get;set;}
 
         public ICollection<string> Tags {get;set;}
     }

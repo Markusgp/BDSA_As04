@@ -29,8 +29,9 @@ namespace Assignment4.Entities
                 Tasks = GetTasksToTask(tag.Tasks).ToList()
             };
 
+            if (_connection.Tags.Contains(entity)) return (Response.Conflict, -1);
+                
             _connection.Tags.Add(entity);
-
             _connection.SaveChanges();
 
             return (Response.Created,entity.Id);
@@ -79,11 +80,14 @@ namespace Assignment4.Entities
         public Response Delete(int tagId, bool force = false)
         {
             var entity = _connection.Tags.Find(tagId);
-
+            
             if (entity == null)
             {
                 return Response.NotFound;
+                // or return null; ???
             }
+
+            if (entity.Tasks.Count != 0 && !force) return Response.Conflict;
 
             _connection.Tags.Remove(entity);
             _connection.SaveChanges();

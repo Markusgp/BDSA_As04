@@ -23,17 +23,22 @@ namespace Assignment4.Entities
 
         public (Response Response, int TaskId) Create(TaskCreateDTO task)
         {
+            var assignedUser = GetUser(task.AssignedToId);
+            if (assignedUser == null) return (Response.BadRequest, -1);
+            
             var entity = new Task
             {
                 Title = task.Title,
                 Description = task.Description,
-                AssignedTo = GetUser(task.AssignedToId),
+                AssignedTo = assignedUser,
                 Tags = GetTagsFromString(task.Tags).ToList(),
                 State = task.State
             };
+            entity.State = State.New;
+            entity.StateUpdated = DateTime.UtcNow;
+            // set to e.g. 2 am if this is untestable
 
             _connection.Tasks.Add(entity);
-
             _connection.SaveChanges();
 
             return (Response.Created,entity.Id);
@@ -113,6 +118,7 @@ namespace Assignment4.Entities
             entity.AssignedTo = GetUser(task.AssignedToId);
             entity.Tags = GetTagsFromString(task.Tags).ToList();
             entity.State = task.State;
+            entity.StateUpdated = DateTime.UtcNow;
 
             _connection.SaveChanges();
 
@@ -128,10 +134,24 @@ namespace Assignment4.Entities
                 return Response.NotFound;
             }
 
-            _connection.Tasks.Remove(entity);
-            _connection.SaveChanges();
-
-            return Response.Deleted;
+            switch (entity.State)
+            {
+                case State.New: {
+                    _connection.Tasks.Remove(entity);
+                    _connection.SaveChanges();
+                }
+                    return Response.Deleted;
+                case State.Active: entity.State = State.Removed;
+                    return Response.Updated;
+                case State.Resolved:
+                    return Response.Conflict;
+                case State.Closed:
+                    return Response.Conflict;
+                case State.Removed:
+                    return Response.Conflict;
+                default:
+                    return Response.BadRequest;
+            }
         }
 
 

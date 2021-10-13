@@ -31,8 +31,10 @@ namespace Assignment4.Entities
                 Tasks = GetTasksToTask(user.Tasks).ToList()
             };
 
-            _connection.Users.Add(entity);
+            if (Enumerable.Any(_connection.Users, u => u.Email == entity.Email))
+                return (Response.Conflict, -1);
 
+            _connection.Users.Add(entity);
             _connection.SaveChanges();
 
             return (Response.Created,entity.Id);
@@ -89,6 +91,8 @@ namespace Assignment4.Entities
                 return Response.NotFound;
             }
 
+            if (entity.Tasks.Count != 0 && !force) return Response.Conflict;
+            
             _connection.Users.Remove(entity);
             _connection.SaveChanges();
 
