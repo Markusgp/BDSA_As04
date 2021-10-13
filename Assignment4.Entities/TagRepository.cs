@@ -3,6 +3,7 @@ using Assignment4.Core;
 using System.Data;
 using System;
 using System.Linq;
+using static Assignment4.Core.Response;
 
 
 namespace Assignment4.Entities
@@ -10,54 +11,44 @@ namespace Assignment4.Entities
     public class TagRepository : ITagRepository
     {
         private readonly KanbanContext _connection;
-        private bool disposedValue;
 
         public TagRepository(KanbanContext connection)
         {
             _connection = connection;
         }
 
-        public void Dispose()
-        {
-            _connection.Dispose();
-        }
         public (Response Response, int TagId) Create(TagCreateDTO tag)
         {
-            var entity = new Tag
+            var sameName = from t in _context.Tags
+                           where t.Name == tag.Name
+                           select t.Id;
+
+            if (sameName.Count() != 0) 
             {
-                Name = tag.Name,
-                Tasks = GetTasksToTask(tag.Tasks).ToList()
-            };
+                return (Conflict, sameName.First());
+            }
 
-            if (_connection.Tags.Contains(entity)) return (Response.Conflict, -1);
-                
-            _connection.Tags.Add(entity);
-            _connection.SaveChanges();
+            var entity = new Tag { Name = tag.Name };
+            _context.Tags.Add(entity);
+            _context.SaveChanges();
+            return (Created, entity.Id);
+        }
 
-            return (Response.Created,entity.Id);
+        public IReadOnlyCollection<TagDTO> ReadAll()
+        {
+            var tags = from t in _context.Tags
+                       select new TagDTO(t.Id, t.Name);
+
+            return tags.ToList().AsReadOnly();
         }
 
         public TagDTO Read(int tagId)
         {
             var tags = from c in _connection.Tags
                          where c.Id == tagId
-                         select new TagDTO(c.Id, c.Name, GetTasksToDTO(c.Tasks).ToList());
+                         select new TagDTO(c.Id, c.Name);
 
-            var tag = tags.FirstOrDefault();
-
-            return new TagDTO
-            (
-                tagId,
-                tag.Name,
-                tag.Tasks
-            );
-        }
-
-        public IReadOnlyCollection<TagDTO> ReadAll()
-        {
-             return _connection.Tags
-                    .Select(c => new TagDTO(c.Id, c.Name, GetTasksToDTO(c.Tasks).ToList()))
-                    .ToList().AsReadOnly();
+            return tags.FirstOrDefault();
         }
 
         public Response Update(TagUpdateDTO tag)
@@ -66,15 +57,13 @@ namespace Assignment4.Entities
 
             if (entity == null)
             {
-                return Response.NotFound;
+                return NotFound;
             }
 
             entity.Name = tag.Name;
-            entity.Tasks = GetTasksToTask(tag.Tasks).ToList();
-
             _connection.SaveChanges();
 
-            return Response.Updated;
+            return Updated;
         }
 
         public Response Delete(int tagId, bool force = false)
@@ -83,46 +72,15 @@ namespace Assignment4.Entities
             
             if (entity == null)
             {
-                return Response.NotFound;
-                // or return null; ???
+                return NotFound;
             }
 
-            if (entity.Tasks.Count != 0 && !force) return Response.Conflict;
+            if (entity.Tasks.Count != 0 && !force) return Conflict;
 
             _connection.Tags.Remove(entity);
             _connection.SaveChanges();
 
-            return Response.Deleted;
-        }
-
-
-        private IEnumerable<TaskDTO> GetTasksToDTO(IEnumerable<Task> tasks) {
-            foreach (var item in tasks)
-            {
-                var task = _connection.Tasks
-                    .Where(t => t.Id == item.Id)
-                    .FirstOrDefault();
-
-                yield return new TaskDTO
-                (
-                    task.Id,
-                    task.Title,
-                    task.Description,
-                    task.AssignedTo.Id,
-                    task.Tags.Select(t => t.Name).ToList(),
-                    task.State
-                );
-            }
-        }
-
-        private IEnumerable<Task> GetTasksToTask(IEnumerable<TaskDTO> tasks) {
-            foreach (var item in tasks)
-            {
-                var task = _connection.Tasks
-                    .Where(t => t.Id == item.Id)
-                    .FirstOrDefault();
-                yield return task;
-            }
+            return Deleted;
         }
     }
 }

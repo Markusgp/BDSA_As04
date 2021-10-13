@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Data;
 using System;
 using System.Linq;
+using static Assignment4.Core.Response;
+using static Assignment4.Core.State;
 
 namespace Assignment4.Entities
 {
@@ -16,32 +18,26 @@ namespace Assignment4.Entities
             _connection = connection;
         }
 
-        public void Dispose()
-        {
-            _connection.Dispose();
-        }
-
         public (Response Response, int TaskId) Create(TaskCreateDTO task)
         {
             var assignedUser = GetUser(task.AssignedToId);
-            if (assignedUser == null) return (Response.BadRequest, -1);
+            if (assignedUser == null) return (BadRequest, -1);
             
             var entity = new Task
             {
                 Title = task.Title,
                 Description = task.Description,
                 AssignedTo = assignedUser,
-                Tags = GetTagsFromString(task.Tags).ToList(),
-                State = task.State
+                Created = DateTime.Now,
+                StateUpdated = DateTime.Now,
+                Tags = new List<Tag>(),
+                State = New
             };
-            entity.State = State.New;
-            entity.StateUpdated = DateTime.UtcNow;
-            // set to e.g. 2 am if this is untestable
 
             _connection.Tasks.Add(entity);
             _connection.SaveChanges();
 
-            return (Response.Created,entity.Id);
+            return (Created, entity.Id);
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAll()
@@ -85,23 +81,18 @@ namespace Assignment4.Entities
 
         public TaskDetailsDTO Read(int taskId)
         {
-            var tasks = from c in _connection.Tasks
-                         where c.Id == taskId
-                         select new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State);
-
-            var task = tasks.FirstOrDefault();
-
-            return new TaskDetailsDTO
-            (
-                taskId,
-                task.Title,
-                task.AssignedToId,
-                GetUser(task.AssignedToId).Name,
-                GetUser(task.AssignedToId).Email,
-                task.Description,
-                task.State,
-                task.Tags
-            );
+            var tasks = from t in _context.Tasks
+                        where t.Id == taskId
+                        select new TaskDetailsDTO(t.Id, 
+                                                  t.Title, 
+                                                  t.Description,
+                                                  t.Created,
+                                                  t.AssignedTo.Name,
+                                                  (from tag in t.Tags select tag.Name).ToList().AsReadOnly(),
+                                                  t.State,
+                                                  t.StateUpdated);
+            
+            return tasks.FirstOrDefault();
         }
 
         public Response Update(TaskUpdateDTO task)
@@ -110,19 +101,36 @@ namespace Assignment4.Entities
 
             if (entity == null)
             {
-                return Response.NotFound;
+                return NotFound;
             }
 
-            entity.Title = task.Title;
-            entity.Description = task.Description;
-            entity.AssignedTo = GetUser(task.AssignedToId);
-            entity.Tags = GetTagsFromString(task.Tags).ToList();
-            entity.State = task.State;
-            entity.StateUpdated = DateTime.UtcNow;
+            if (task.AssignedToId != null && GetUser(task.AssignedToId) == null)
+            {
+                return BadRequest;
+            }
 
+            if (task.Title != null)         entity.Title = task.Title;
+            if (task.AssignedToId != null)  entity.AssignedTo = GetUser(task.AssignedToId);
+            if (task.Description != null)   entity.Description = task.Description;
+            if (entity.State != task.State) entity.StateUpdated = DateTime.Now;
+            entity.State = task.State;
+
+            if (task.Tags != null) 
+            {
+                foreach (string tagName in task.Tags)
+                {
+                    var tag = GetTag(tagName);
+                    if (tag == null) 
+                    {
+                        tag = new Tag { Name = tagName };
+                        _context.Tags.Add(tag);
+                    }
+                    entity.Tags.Add(tag);
+                }
+            }          
             _connection.SaveChanges();
 
-            return Response.Updated;
+            return Updated;
         }
 
         public Response Delete(int taskId)
@@ -131,27 +139,25 @@ namespace Assignment4.Entities
 
             if (entity == null)
             {
-                return Response.NotFound;
+                return NotFound;
+            }
+        
+            if (entity.State == New) 
+            {
+                _context.Tasks.Remove(entity);
+                _context.SaveChanges();
+
+                return Deleted;
             }
 
-            switch (entity.State)
-            {
-                case State.New: {
-                    _connection.Tasks.Remove(entity);
-                    _connection.SaveChanges();
-                }
-                    return Response.Deleted;
-                case State.Active: entity.State = State.Removed;
-                    return Response.Updated;
-                case State.Resolved:
-                    return Response.Conflict;
-                case State.Closed:
-                    return Response.Conflict;
-                case State.Removed:
-                    return Response.Conflict;
-                default:
-                    return Response.BadRequest;
+            if (entity.State == Active) {
+                entity.StateUpdated = DateTime.Now;
+                entity.State = Removed;
+
+                return Deleted;
             }
+
+            return Conflict;  
         }
 
 
@@ -159,9 +165,9 @@ namespace Assignment4.Entities
 
         private User GetUser(int? assignedToId)
         {
-            if (assignedToId == null) return null;
-            return _connection.Users.FirstOrDefault(c => c.Id == assignedToId) ??
-            new User { Id = (int) assignedToId };
+            if (userId == null) return null;
+            var existing = _context.Users.Where(u => u.Id == userId).Select(u => u);
+            return existing.FirstOrDefault();
         }
 
         private IEnumerable<Tag> GetTagsFromString(ICollection<string> tags)
@@ -177,22 +183,11 @@ namespace Assignment4.Entities
             
         }
 
-        private IEnumerable<string> GetTags(ICollection<Tag> tags) 
-        {
-            foreach (var item in tags)
-            {
-                var tag = _connection.Tags
-                    .Where(t => t.Name == item.Name)
-                    .FirstOrDefault();
-
-                yield return tag.Name;
-            }
-        }
-
         private Tag GetTag(string tag)
         {
-            return _connection.Tags.FirstOrDefault(c => c.Name == tag) ??
-            new Tag { Name = tag };
+            if (tagName == null) return null;
+            var existing = _context.Tags.Where(t => t.Name == tagName).Select(t => t);
+            return existing.FirstOrDefault();
         }
     }
 }
