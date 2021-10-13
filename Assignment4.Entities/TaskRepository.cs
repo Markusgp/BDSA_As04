@@ -6,7 +6,7 @@ using System.Linq;
 using static Assignment4.Core.Response;
 using static Assignment4.Core.State;
 
-namespace Assignment4.Entities
+namespace Assignment4.Entities.Tests
 {
     public class TaskRepository : ITaskRepository
     {
@@ -42,46 +42,70 @@ namespace Assignment4.Entities
 
         public IReadOnlyCollection<TaskDTO> ReadAll()
         {
-            return _connection.Tasks
-                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
-                    .ToList().AsReadOnly();
+            var tasks = from t in _connection.Tasks
+                        select new TaskDTO(t.Id, 
+                                           t.Title, 
+                                           t.AssignedTo.Name,
+                                           (from tag in t.Tags select tag.Name).ToList().AsReadOnly(),
+                                           t.State);
+
+            return tasks.ToList().AsReadOnly();
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAllRemoved()
         {
-            return _connection.Tasks
-                    .Where(c => c.State == State.Removed)
-                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
-                    .ToList().AsReadOnly();
+            var tasks = from t in _connection.Tasks
+                        where t.State == Removed
+                        select new TaskDTO(t.Id, 
+                                           t.Title, 
+                                           t.AssignedTo.Name,
+                                           (from tag in t.Tags select tag.Name).ToList().AsReadOnly(),
+                                           t.State);
+
+            return tasks.ToList().AsReadOnly();
         }
 
-        public IReadOnlyCollection<TaskDTO> ReadAllByTag(string tag)
-        {
-            return _connection.Tasks
-                    .Where(c => c.Tags.Contains(GetTag(tag)))
-                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
-                    .ToList().AsReadOnly();
-        }
+        public IReadOnlyCollection<TaskDTO> ReadAllByTag(string tag) =>
+            _connection.Tasks.Where(t => t.Tags.Select(ta => ta.Name)
+                                            .Contains(tag))
+                          .Select(t => new TaskDTO(t.Id, 
+                                                   t.Title, 
+                                                   t.AssignedTo.Name,
+                                                   (from tag in t.Tags select tag.Name).ToList().AsReadOnly(),
+                                                   t.State))
+                          .ToList()
+                          .AsReadOnly();
 
         public IReadOnlyCollection<TaskDTO> ReadAllByUser(int userId)
         {
-            return _connection.Tasks
-                    .Where(c => c.AssignedTo.Id == userId)
-                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
-                    .ToList().AsReadOnly();
+            var tasks = from t in 
+            _connection.Tasks
+                        where t.AssignedTo.Id == userId
+                        select new TaskDTO(t.Id, 
+                                           t.Title, 
+                                           t.AssignedTo.Name,
+                                           (from tag in t.Tags select tag.Name).ToList().AsReadOnly(),
+                                           t.State);
+
+            return tasks.ToList().AsReadOnly();
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAllByState(State state)
         {
-            return _connection.Tasks
-                    .Where(c => c.State == state)
-                    .Select(c => new TaskDTO(c.Id, c.Title, c.Description, c.AssignedTo.Id, GetTags(c.Tags).ToList(), c.State))
-                    .ToList().AsReadOnly();
+            var tasks = from t in _connection.Tasks
+                        where t.State == state
+                        select new TaskDTO(t.Id, 
+                                           t.Title, 
+                                           t.AssignedTo.Name,
+                                           (from tag in t.Tags select tag.Name).ToList().AsReadOnly(),
+                                           t.State);
+
+            return tasks.ToList().AsReadOnly();
         }
 
         public TaskDetailsDTO Read(int taskId)
         {
-            var tasks = from t in _context.Tasks
+            var tasks = from t in _connection.Tasks
                         where t.Id == taskId
                         select new TaskDetailsDTO(t.Id, 
                                                   t.Title, 
@@ -123,7 +147,7 @@ namespace Assignment4.Entities
                     if (tag == null) 
                     {
                         tag = new Tag { Name = tagName };
-                        _context.Tags.Add(tag);
+                        _connection.Tags.Add(tag);
                     }
                     entity.Tags.Add(tag);
                 }
@@ -144,8 +168,8 @@ namespace Assignment4.Entities
         
             if (entity.State == New) 
             {
-                _context.Tasks.Remove(entity);
-                _context.SaveChanges();
+                _connection.Tasks.Remove(entity);
+                _connection.SaveChanges();
 
                 return Deleted;
             }
@@ -165,8 +189,8 @@ namespace Assignment4.Entities
 
         private User GetUser(int? assignedToId)
         {
-            if (userId == null) return null;
-            var existing = _context.Users.Where(u => u.Id == userId).Select(u => u);
+            if (assignedToId == null) return null;
+            var existing = _connection.Users.Where(u => u.Id == assignedToId).Select(u => u);
             return existing.FirstOrDefault();
         }
 
@@ -185,8 +209,8 @@ namespace Assignment4.Entities
 
         private Tag GetTag(string tag)
         {
-            if (tagName == null) return null;
-            var existing = _context.Tags.Where(t => t.Name == tagName).Select(t => t);
+            if (tag == null) return null;
+            var existing = _connection.Tags.Where(t => t.Name == tag).Select(t => t);
             return existing.FirstOrDefault();
         }
     }

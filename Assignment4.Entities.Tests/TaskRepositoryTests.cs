@@ -9,7 +9,7 @@ using System.Data.SQLite;
 
 namespace Assignment4.Entities.Tests
 {
-    public class TaskRepositoryTests : IDisposable
+    public class TaskRepositoryTests
     {
         private readonly KanbanContext _context;
         private readonly TaskRepository repo;
@@ -54,10 +54,7 @@ namespace Assignment4.Entities.Tests
             {   
                 Title = "Repo testing",
                 AssignedToId = 0,
-                AssignedToName = "Test User",
-                AssignedToEmail = "...",
                 Description = "Testing our three repositories",
-                State = State.New,
                 Tags = new List<string>()
             };
 
@@ -75,12 +72,5 @@ namespace Assignment4.Entities.Tests
         {
 
         }
-
-
-        public void Dispose()
-        {
-            _context.Dispose();
-        }
-
     }
 }

@@ -19,7 +19,7 @@ namespace Assignment4.Entities
 
         public (Response Response, int TagId) Create(TagCreateDTO tag)
         {
-            var sameName = from t in _context.Tags
+            var sameName = from t in _connection.Tags
                            where t.Name == tag.Name
                            select t.Id;
 
@@ -29,14 +29,14 @@ namespace Assignment4.Entities
             }
 
             var entity = new Tag { Name = tag.Name };
-            _context.Tags.Add(entity);
-            _context.SaveChanges();
+            _connection.Tags.Add(entity);
+            _connection.SaveChanges();
             return (Created, entity.Id);
         }
 
         public IReadOnlyCollection<TagDTO> ReadAll()
         {
-            var tags = from t in _context.Tags
+            var tags = from t in _connection.Tags
                        select new TagDTO(t.Id, t.Name);
 
             return tags.ToList().AsReadOnly();

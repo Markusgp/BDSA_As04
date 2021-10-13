@@ -7,6 +7,7 @@ using System.Linq;
 
 namespace Assignment4.Entities
 {
+    /*
     public class UserRepository : IUserRepository
     {
         private readonly KanbanContext _connection;
@@ -128,5 +129,5 @@ namespace Assignment4.Entities
                 yield return task;
             }
         }
-    }
+    }*/
 }
